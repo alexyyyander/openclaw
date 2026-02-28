@@ -9,6 +9,7 @@ export function resolveWhatsAppOutboundTarget(params: {
   to: string | null | undefined;
   allowFrom: Array<string | number> | null | undefined;
   mode: string | null | undefined;
+  selfChatMode?: boolean;
 }): WhatsAppOutboundTargetResolution {
   const trimmed = params.to?.trim() ?? "";
   const allowListRaw = (params.allowFrom ?? [])
