@@ -64,7 +64,8 @@ export async function fetchCodexUsage(
 
   if (data.rate_limit?.secondary_window) {
     const sw = data.rate_limit.secondary_window;
-    const windowHours = Math.round((sw.limit_window_seconds || 86400) / 3600);
+    // Default to weekly (168 hours) since Codex typically has weekly secondary windows
+    const windowHours = Math.round((sw.limit_window_seconds || 604800) / 3600);
     const label = windowHours >= 168 ? "Week" : windowHours >= 24 ? "Day" : `${windowHours}h`;
     windows.push({
       label,
