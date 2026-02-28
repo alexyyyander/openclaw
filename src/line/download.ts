@@ -80,28 +80,42 @@ function detectContentType(buffer: Buffer): string {
     ) {
       return "image/webp";
     }
-    // M4A/AAC - check brand at bytes 8-11 (M4A , M4AE, M4AP, etc.)
-    // Must check BEFORE generic MP4 since both have 'ftyp' at bytes 4-7
-    if (buffer.length >= 12) {
-      if (buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) {
-        // M4A brands at bytes 8-11
-        const brand = String.fromCharCode(buffer[8], buffer[9], buffer[10], buffer[11]);
-        if (
-          brand === "M4A " ||
-          brand === "M4AE" ||
-          brand === "M4AP" ||
-          brand === "M4BP" ||
-          brand === "M4VP"
-        ) {
-          return "audio/mp4";
-        }
-      }
-    }
-    // MP4 (generic video)
+  }
+
+  // MP4/M4A container detection - check for 'ftyp' box at bytes 4-7
+  if (buffer.length >= 12) {
     if (buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) {
+      const brand = String.fromCharCode(buffer[8], buffer[9], buffer[10], buffer[11]);
+
+      // Known audio brands - return audio/mp4
+      // M4A* = MPEG-4 Audio variants (M4A , M4AE, M4AP, M4BP, M4VP, M4PB, M4UH, etc.)
+      // isom = ISO Base Media, commonly used for audio-only MP4
+      // M4BL = Blu-ray audio, M4TG = 3GPP audio
+      if (
+        brand.startsWith("M4A") ||
+        brand === "isom" ||
+        brand === "M4BL" ||
+        brand === "M4TG" ||
+        brand === "M4  " ||
+        brand === "M4N" ||
+        brand === "M4P"
+      ) {
+        return "audio/mp4";
+      }
+
+      // Known video brands - return video/mp4
+      // avc* = H.264 video, mp4* = MPEG-4 video, M4V = iTunes video
+      if (brand.startsWith("avc") || brand.startsWith("mp4") || brand === "M4V ") {
+        return "video/mp4";
+      }
+
+      // Unknown brand - default to video/mp4 for backward compatibility
       return "video/mp4";
     }
-    // Legacy M4A check (fallback for short buffers)
+  }
+
+  // Legacy M4A check (fallback for short buffers with leading zeros)
+  if (buffer.length >= 8) {
     if (buffer[0] === 0x00 && buffer[1] === 0x00 && buffer[2] === 0x00) {
       if (buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) {
         return "audio/mp4";
