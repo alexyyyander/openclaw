@@ -52,7 +52,18 @@ export function getCustomProviderApiKey(
   provider: string,
 ): string | undefined {
   const entry = resolveProviderConfig(cfg, provider);
-  return normalizeOptionalSecretInput(entry?.apiKey);
+  const rawKey = normalizeOptionalSecretInput(entry?.apiKey);
+  if (!rawKey) {
+    return undefined;
+  }
+  // If the config value looks like an env var name (uppercase with underscores),
+  // try to resolve it from process.env. This allows configs like:
+  // { "models": { "providers": { "openai": { "apiKey": "OPENAI_API_KEY" } } } }
+  // to work in isolated sessions where process.env might not have the env var.
+  if (/^[A-Z][A-Z0-9_]*$/.test(rawKey)) {
+    return process.env[rawKey] ?? rawKey;
+  }
+  return rawKey;
 }
 
 function resolveProviderAuthOverride(
@@ -192,7 +203,14 @@ export async function resolveApiKeyForProvider(params: {
       }
     } catch {}
   }
+  // Try config-based API key first (from openclaw.json models.providers)
+  // This includes resolving env var references like "OPENAI_API_KEY"
+  const customKey = getCustomProviderApiKey(cfg, provider);
+  if (customKey) {
+    return { apiKey: customKey, source: "models.json", mode: "api-key" };
+  }
 
+  // Fall back to built-in provider env vars (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
   const envResolved = resolveEnvApiKey(provider);
   if (envResolved) {
     return {
@@ -200,11 +218,6 @@ export async function resolveApiKeyForProvider(params: {
       source: envResolved.source,
       mode: envResolved.source.includes("OAUTH_TOKEN") ? "oauth" : "api-key",
     };
-  }
-
-  const customKey = getCustomProviderApiKey(cfg, provider);
-  if (customKey) {
-    return { apiKey: customKey, source: "models.json", mode: "api-key" };
   }
 
   const normalized = normalizeProviderId(provider);
