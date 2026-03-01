@@ -333,6 +333,11 @@ export class SearchableSelectList implements Component {
 
     const allowVimNav = !this.searchInput.getValue().trim();
 
+    // Guard: prevent navigation when filteredItems is empty to avoid selectedIndex becoming -1
+    if (this.filteredItems.length === 0) {
+      return;
+    }
+
     // Navigation keys
     if (
       matchesKey(keyData, "up") ||
