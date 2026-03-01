@@ -270,8 +270,12 @@ export async function getReplyFromConfig(
     perMessageQueueMode,
     perMessageQueueOptions,
   } = directiveResult.result;
-  provider = resolvedProvider;
-  model = resolvedModel;
+  // Only apply directive model/provider if no heartbeat model override is in place.
+  // Heartbeat model override takes precedence over /model directives.
+  if (!hasResolvedHeartbeatModelOverride) {
+    provider = resolvedProvider;
+    model = resolvedModel;
+  }
 
   const maybeEmitMissingResetHooks = async () => {
     if (!resetTriggered || !command.isAuthorizedSender || command.resetHookTriggered) {
