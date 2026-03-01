@@ -285,6 +285,12 @@ export function handleControlUiHttpRequest(
   const url = new URL(urlRaw, "http://localhost");
   const basePath = normalizeControlUiBasePath(opts?.basePath);
   const pathname = url.pathname;
+  // API routes should return 404, not fall through to the SPA
+  // This prevents /api/* requests from being served as index.html
+  if (pathname.startsWith("/api/")) {
+    respondNotFound(res);
+    return true;
+  }
 
   if (!basePath) {
     if (pathname === "/ui" || pathname.startsWith("/ui/")) {

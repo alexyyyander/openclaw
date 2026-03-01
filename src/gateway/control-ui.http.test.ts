@@ -374,4 +374,17 @@ describe("handleControlUiHttpRequest", () => {
       },
     });
   });
+  it("returns 404 for /api/* routes instead of falling through to SPA", async () => {
+    await withControlUiRoot({
+      fn: async (tmp) => {
+        const { res, end, handled } = runControlUiRequest({
+          url: "/api/sessions",
+          method: "GET",
+          rootPath: tmp,
+        });
+
+        expectNotFoundResponse({ handled, res, end });
+      },
+    });
+  });
 });
