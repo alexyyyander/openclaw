@@ -60,12 +60,39 @@ function extractTextBlocksAndSignals(message: unknown): {
 function isDroppedBoundaryTextBlockSubset(params: {
   streamedTextBlocks: string[];
   finalTextBlocks: string[];
+  streamedSawNonTextContentBlocks: boolean;
 }): boolean {
-  const { streamedTextBlocks, finalTextBlocks } = params;
+  const { streamedTextBlocks, finalTextBlocks, streamedSawNonTextContentBlocks } = params;
   if (finalTextBlocks.length === 0 || finalTextBlocks.length >= streamedTextBlocks.length) {
     return false;
   }
 
+  // If we saw non-text content blocks (like tool calls) in the stream,
+  // and the final has fewer text blocks, check if it's a valid subset.
+  // We should preserve the streamed text only if the final text blocks
+  // are actually a prefix or suffix match (meaning the drop is just truncation,
+  // not replacement).
+  if (streamedSawNonTextContentBlocks && finalTextBlocks.length < streamedTextBlocks.length) {
+    // Check prefix match
+    const prefixMatches = finalTextBlocks.every(
+      (block, index) => streamedTextBlocks[index] === block,
+    );
+    if (prefixMatches) {
+      return true;
+    }
+    // Check suffix match
+    const suffixStart = streamedTextBlocks.length - finalTextBlocks.length;
+    const suffixMatches = finalTextBlocks.every(
+      (block, index) => streamedTextBlocks[suffixStart + index] === block,
+    );
+    if (suffixMatches) {
+      return true;
+    }
+    // Final has different content - don't preserve, use the replacement
+    return false;
+  }
+
+  // Check prefix match: final blocks exactly match the start of streamed blocks
   const prefixMatches = finalTextBlocks.every(
     (block, index) => streamedTextBlocks[index] === block,
   );
@@ -73,6 +100,7 @@ function isDroppedBoundaryTextBlockSubset(params: {
     return true;
   }
 
+  // Check suffix match: final blocks exactly match the end of streamed blocks
   const suffixStart = streamedTextBlocks.length - finalTextBlocks.length;
   return finalTextBlocks.every((block, index) => streamedTextBlocks[suffixStart + index] === block);
 }
@@ -97,6 +125,7 @@ function shouldPreserveBoundaryDroppedText(params: {
   return isDroppedBoundaryTextBlockSubset({
     streamedTextBlocks: params.streamedTextBlocks,
     finalTextBlocks: params.nextContentBlocks,
+    streamedSawNonTextContentBlocks: params.streamedSawNonTextContentBlocks,
   });
 }
 
@@ -188,6 +217,7 @@ export class TuiStreamAssembler {
       isDroppedBoundaryTextBlockSubset({
         streamedTextBlocks,
         finalTextBlocks: state.contentBlocks,
+        streamedSawNonTextContentBlocks,
       });
     const finalText = resolveFinalAssistantText({
       finalText: shouldKeepStreamedText ? streamedDisplayText : finalComposed,
