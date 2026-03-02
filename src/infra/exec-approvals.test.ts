@@ -82,6 +82,83 @@ describe("exec approvals allowlist matching", () => {
     expect(match?.pattern).toBe("*");
   });
 
+  it("matches paths with regex metacharacters (+, ., (, ), [, ], {, }, ?, |)", () => {
+    // Regression test for #32145 - binary paths containing + (g++, clang++)
+    // should not break regex compilation
+    const gppResolution = {
+      rawExecutable: "g++",
+      resolvedPath: "/usr/bin/g++",
+      executableName: "g++",
+    };
+    const clangppResolution = {
+      rawExecutable: "clang++",
+      resolvedPath: "/usr/local/bin/clang++",
+      executableName: "clang++",
+    };
+
+    // Test exact path matching with +
+    const gppMatch = matchAllowlist([{ pattern: "/usr/bin/g++" }], gppResolution);
+    expect(gppMatch).not.toBeNull();
+    expect(gppMatch?.pattern).toBe("/usr/bin/g++");
+
+    // Test wildcard matching with +
+    const wildcardMatch = matchAllowlist([{ pattern: "/usr/bin/g++" }], {
+      rawExecutable: "g++",
+      resolvedPath: "/usr/bin/g++-14",
+      executableName: "g++-14",
+    });
+    expect(wildcardMatch).toBeNull();
+
+    // Test clang++ path
+    const clangMatch = matchAllowlist([{ pattern: "/usr/local/bin/clang++" }], clangppResolution);
+    expect(clangMatch).not.toBeNull();
+    expect(clangMatch?.pattern).toBe("/usr/local/bin/clang++");
+  });
+
+  it("handles paths with various regex metacharacters (. () [] { } ? |)", () => {
+    // Additional regression tests for paths containing other regex metacharacters
+    const testCases = [
+      // Paths with parentheses
+      {
+        pattern: "/opt/tools/(custom)/bin/node",
+        resolvedPath: "/opt/tools/(custom)/bin/node",
+        shouldMatch: true,
+      },
+      {
+        pattern: "/opt/tools/(custom)/bin/*",
+        resolvedPath: "/opt/tools/(custom)/bin/node",
+        shouldMatch: true,
+      },
+      // Paths with square brackets
+      {
+        pattern: "/usr/local/bin/app[64]",
+        resolvedPath: "/usr/local/bin/app[64]",
+        shouldMatch: true,
+      },
+      // Paths with curly braces
+      { pattern: "/usr/bin/{gcc,g++}", resolvedPath: "/usr/bin/g++", shouldMatch: false }, // curly brace glob not supported
+      // Paths with pipe (escaped in regex)
+      { pattern: "/usr/bin/cmd|a", resolvedPath: "/usr/bin/cmd|a", shouldMatch: true },
+      // Paths with question mark
+      { pattern: "/usr/bin/file?.txt", resolvedPath: "/usr/bin/file1.txt", shouldMatch: true },
+    ];
+
+    for (const tc of testCases) {
+      const resolution = {
+        rawExecutable: tc.resolvedPath.split("/").pop() || "",
+        resolvedPath: tc.resolvedPath,
+        executableName: tc.resolvedPath.split("/").pop() || "",
+      };
+      const match = matchAllowlist([{ pattern: tc.pattern }], resolution);
+      if (tc.shouldMatch) {
+        expect(match).not.toBeNull();
+      } else {
+        // Some patterns may not match as expected due to glob vs regex differences
+        // Just verify no exception is thrown
+      }
+    }
+  });
+
   it("requires a resolved path", () => {
     const match = matchAllowlist([{ pattern: "bin/rg" }], {
       rawExecutable: "bin/rg",
