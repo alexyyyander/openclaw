@@ -233,6 +233,17 @@ export function createInternalHookEvent(
   };
 }
 
+/**
+ * Trigger a message:sent hook event.
+ * Convenience wrapper around triggerInternalHook for message:sent events.
+ */
+export async function triggerMessageSentHook(
+  context: MessageSentHookContext & { sessionKey: string },
+): Promise<void> {
+  const event = createInternalHookEvent("message", "sent", context.sessionKey, context);
+  await triggerInternalHook(event);
+}
+
 export function isAgentBootstrapEvent(event: InternalHookEvent): event is AgentBootstrapHookEvent {
   if (event.type !== "agent" || event.action !== "bootstrap") {
     return false;

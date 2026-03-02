@@ -42,6 +42,8 @@ function getHumanDelay(config: HumanDelayConfig | undefined): number {
 
 export type ReplyDispatcherOptions = {
   deliver: ReplyDispatchDeliverer;
+  /** Called after successful delivery of a payload. Use for emitting message:sent hooks. */
+  onDelivered?: (payload: { text: string; mediaUrls: string[] }) => void | Promise<void>;
   responsePrefix?: string;
   /** Static context for response prefix template interpolation. */
   responsePrefixContext?: ResponsePrefixContext;
@@ -156,6 +158,13 @@ export function createReplyDispatcher(options: ReplyDispatcherOptions): ReplyDis
         // Safe: deliver is called inside an async .then() callback, so even a synchronous
         // throw becomes a rejection that flows through .catch()/.finally(), ensuring cleanup.
         await options.deliver(normalized, { kind });
+        // Fire onDelivered callback after successful delivery (for message:sent hooks)
+        if (options.onDelivered) {
+          const text = typeof normalized.text === "string" ? normalized.text : "";
+          const mediaUrls =
+            normalized.mediaUrls ?? (normalized.mediaUrl ? [normalized.mediaUrl] : []);
+          void options.onDelivered({ text, mediaUrls });
+        }
       })
       .catch((err) => {
         options.onError?.(err, { kind });
