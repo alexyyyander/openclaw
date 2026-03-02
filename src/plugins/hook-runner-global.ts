@@ -29,10 +29,12 @@ export function initializeGlobalHookRunner(registry: PluginRegistry): void {
     },
     catchErrors: true,
   });
-
-  const hookCount = registry.hooks.length;
-  if (hookCount > 0) {
-    log.info(`hook runner initialized with ${hookCount} registered hooks`);
+  const typedHookCount = registry.typedHooks.length;
+  const legacyHookCount = registry.hooks.length;
+  if (typedHookCount > 0 || legacyHookCount > 0) {
+    log.info(
+      `hook runner initialized with ${typedHookCount} typed hooks, ${legacyHookCount} legacy hooks`,
+    );
   }
 }
 
