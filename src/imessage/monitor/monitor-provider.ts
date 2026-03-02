@@ -23,6 +23,7 @@ import {
 } from "../../config/runtime-group-policy.js";
 import { readSessionUpdatedAt, resolveStorePath } from "../../config/sessions.js";
 import { danger, logVerbose, shouldLogVerbose, warn } from "../../globals.js";
+import { triggerMessageSentHook } from "../../hooks/internal-hooks.js";
 import { normalizeScpRemoteHost } from "../../infra/scp-host.js";
 import { waitForTransportReady } from "../../infra/transport-ready.js";
 import { mediaKindFromMime } from "../../media/constants.js";
@@ -376,6 +377,18 @@ export async function monitorIMessageProvider(opts: MonitorIMessageOpts = {}): P
       },
       onError: (err, info) => {
         runtime.error?.(danger(`imessage ${info.kind} reply failed: ${String(err)}`));
+      },
+      onDelivered: async (deliveredPayload) => {
+        if (deliveredPayload.text) {
+          await triggerMessageSentHook({
+            sessionKey: ctxPayload.SessionKey,
+            to: ctxPayload.To ?? "",
+            content: deliveredPayload.text,
+            success: true,
+            channelId: "imessage",
+            accountId: accountInfo.accountId,
+          });
+        }
       },
     });
 

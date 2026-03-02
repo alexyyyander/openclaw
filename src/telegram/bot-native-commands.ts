@@ -31,6 +31,7 @@ import type {
   TelegramTopicConfig,
 } from "../config/types.js";
 import { danger, logVerbose } from "../globals.js";
+import { triggerMessageSentHook } from "../hooks/internal-hooks.js";
 import { getChildLogger } from "../logging.js";
 import { getAgentScopedMediaLocalRoots } from "../media/local-roots.js";
 import {
@@ -663,6 +664,18 @@ export const registerTelegramNativeCommands = ({
               },
               onError: (err, info) => {
                 runtime.error?.(danger(`telegram slash ${info.kind} reply failed: ${String(err)}`));
+              },
+              onDelivered: async (deliveredPayload) => {
+                if (deliveredPayload.text) {
+                  await triggerMessageSentHook({
+                    sessionKey: ctxPayload.SessionKey,
+                    to: String(chatId),
+                    content: deliveredPayload.text,
+                    success: true,
+                    channelId: "telegram",
+                    accountId: route.accountId,
+                  });
+                }
               },
             },
             replyOptions: {
