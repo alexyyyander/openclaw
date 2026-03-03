@@ -140,9 +140,32 @@ export function wrapNoteMessage(
     .join("\n");
 }
 
+/**
+ * Check if the message appears to be a JSON block that should be displayed
+ * without box framing (to allow easy copy-paste).
+ */
+function isLikelyJsonBlock(message: string): boolean {
+  const lines = message.split("\n");
+  // Check for JSON-like structure:
+  // - Line starting with { or [
+  // - Lines with "key": value patterns (JSON object properties)
+  const hasJsonStart = lines.some((line) => /^\s*[[{]/.test(line));
+  const hasJsonProperties = lines.filter((line) => /^\s*["\w]+\s*:/.test(line.trim())).length >= 3;
+  return hasJsonStart && hasJsonProperties;
+}
+
 export function note(message: string, title?: string) {
   if (isSuppressedByEnv(process.env.OPENCLAW_SUPPRESS_NOTES)) {
     return;
   }
-  clackNote(wrapNoteMessage(message), stylePromptTitle(title));
+  // For JSON content, use console.log to avoid box framing that makes copy-paste difficult
+  if (isLikelyJsonBlock(message)) {
+    if (title) {
+      console.log(`\n${title}:\n${message}`);
+    } else {
+      console.log(`\n${message}`);
+    }
+    return;
+  }
+  clackNote(wrapNoteMessage(message), stylePromptTitle(title), { withGuide: false });
 }
