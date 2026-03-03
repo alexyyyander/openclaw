@@ -374,7 +374,7 @@ export function createExecTool(
       const env = sandbox
         ? buildSandboxEnv({
             defaultPath: DEFAULT_PATH,
-            paramsEnv: params.env,
+            paramsEnv: mergedEnv, // Use mergedEnv to include skill env vars from process.env
             sandboxEnv: sandbox.env,
             containerWorkdir: containerWorkdir ?? sandbox.containerWorkdir,
           })
