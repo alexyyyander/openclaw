@@ -28,7 +28,11 @@ import {
 } from "../chat-abort.js";
 import { type ChatImageContent, parseMessageWithAttachments } from "../chat-attachments.js";
 import { stripEnvelopeFromMessage, stripEnvelopeFromMessages } from "../chat-sanitize.js";
-import { GATEWAY_CLIENT_CAPS, hasGatewayClientCap } from "../protocol/client-info.js";
+import {
+  GATEWAY_CLIENT_CAPS,
+  GATEWAY_CLIENT_NAMES,
+  hasGatewayClientCap,
+} from "../protocol/client-info.js";
 import {
   ErrorCodes,
   errorShape,
@@ -880,13 +884,14 @@ export const chatHandlers: GatewayRequestHandlers = {
         !isChannelScopedSession &&
         typeof sessionScopeParts[1] === "string" &&
         sessionChannelHint === routeChannelCandidate;
-      // Only inherit prior external route metadata for channel-scoped sessions.
-      // Channel-agnostic sessions (main, direct:<peer>, etc.) can otherwise
-      // leak stale routes across surfaces.
+      const isInternalClient = clientInfo?.id === GATEWAY_CLIENT_NAMES.GATEWAY_CLIENT;
+      // For internal clients (TUI, webchat), don't inherit external delivery context
+      // as the message is coming from an internal surface, not the external channel.
       const canInheritDeliverableRoute = Boolean(
         sessionChannelHint &&
         sessionChannelHint !== INTERNAL_MESSAGE_CHANNEL &&
         !isChannelAgnosticSessionScope &&
+        !isInternalClient &&
         (isChannelScopedSession || hasLegacyChannelPeerShape),
       );
       const hasDeliverableRoute =
