@@ -31,7 +31,7 @@ function warnInvalidAllowFromEntries(entries: string[]) {
       [
         "Invalid allowFrom entry:",
         JSON.stringify(entry),
-        "- allowFrom/groupAllowFrom authorization requires numeric Telegram sender IDs only.",
+        "- allowFrom/groupAllowFrom authorization requires numeric Telegram user IDs (positive) or group IDs (negative) only.",
         'If you had "@username" entries, re-run onboarding (it resolves @username to IDs) or replace them manually.',
       ].join(" "),
     );
@@ -44,7 +44,7 @@ export const normalizeAllowFrom = (list?: Array<string | number>): NormalizedAll
   const normalized = entries
     .filter((value) => value !== "*")
     .map((value) => value.replace(/^(telegram|tg):/i, ""));
-  const invalidEntries = normalized.filter((value) => !/^\d+$/.test(value));
+  const invalidEntries = normalized.filter((value) => !/^-?\d+$/.test(value));
   if (invalidEntries.length > 0) {
     warnInvalidAllowFromEntries([...new Set(invalidEntries)]);
   }
