@@ -19,6 +19,13 @@ function isWindowsBatchCommand(resolvedCommand: string): boolean {
   return ext === ".cmd" || ext === ".bat";
 }
 
+/**
+ * Check if any argument contains spaces and needs special Windows handling.
+ */
+function argvContainsSpaces(args: string[]): boolean {
+  return args.some((arg) => arg.includes(" "));
+}
+
 function escapeForCmdExe(arg: string): string {
   // Reject cmd metacharacters to avoid injection when we must pass a single command line.
   if (WINDOWS_UNSAFE_CMD_CHARS_RE.test(arg)) {
@@ -77,7 +84,7 @@ function resolveCommand(command: string): string {
   if (ext) {
     return command;
   }
-  const cmdCommands = ["pnpm", "yarn"];
+  const cmdCommands = ["pnpm", "yarn", "npm", "npx"];
   if (cmdCommands.includes(basename)) {
     return `${command}.cmd`;
   }
@@ -225,16 +232,19 @@ export async function runCommandWithTimeout(
   const finalArgv = process.platform === "win32" ? (resolveNpmArgvForWindows(argv) ?? argv) : argv;
   const resolvedCommand = finalArgv !== argv ? (finalArgv[0] ?? "") : resolveCommand(argv[0] ?? "");
   const useCmdWrapper = isWindowsBatchCommand(resolvedCommand);
+  // Also use cmd wrapper when argv contains spaces (e.g., Node.js at "C:\\Program Files\\nodejs")
+  const useCmdWrapperForSpaces = process.platform === "win32" && argvContainsSpaces(finalArgv);
+  const forceCmdWrapper = useCmdWrapper || useCmdWrapperForSpaces;
   const child = spawn(
-    useCmdWrapper ? (process.env.ComSpec ?? "cmd.exe") : resolvedCommand,
-    useCmdWrapper
+    forceCmdWrapper ? (process.env.ComSpec ?? "cmd.exe") : resolvedCommand,
+    forceCmdWrapper
       ? ["/d", "/s", "/c", buildCmdExeCommandLine(resolvedCommand, finalArgv.slice(1))]
       : finalArgv.slice(1),
     {
       stdio,
       cwd,
       env: resolvedEnv,
-      windowsVerbatimArguments: useCmdWrapper ? true : windowsVerbatimArguments,
+      windowsVerbatimArguments: forceCmdWrapper ? true : windowsVerbatimArguments,
       ...(shouldSpawnWithShell({ resolvedCommand, platform: process.platform })
         ? { shell: true }
         : {}),
