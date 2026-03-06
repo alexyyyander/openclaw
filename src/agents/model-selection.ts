@@ -130,6 +130,11 @@ function normalizeProviderModelId(provider: string, model: string): string {
   if (provider === "openrouter" && !model.includes("/")) {
     return `openrouter/${model}`;
   }
+  // NVIDIA NIM API expects bare model IDs (e.g., "moonshotai/kimi-k2.5") not
+  // prefixed ones (e.g., "nvidia/moonshotai/kimi-k2.5"). Strip the prefix if present.
+  if (provider === "nvidia") {
+    return model.replace(/^nvidia\//i, "");
+  }
   return model;
 }
 
