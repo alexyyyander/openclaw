@@ -255,8 +255,9 @@ export class GatewayClient {
       : null;
     // Keep shared gateway credentials explicit. Persisted per-device tokens only
     // participate when no explicit shared token is provided.
-    const resolvedDeviceToken =
-      explicitDeviceToken ?? (!explicitGatewayToken ? (storedToken ?? undefined) : undefined);
+    // Always include device token when available - it will be used for device identity
+    // verification in addition to the gateway token for main authentication.
+    const resolvedDeviceToken = explicitDeviceToken ?? storedToken ?? undefined;
     // Legacy compatibility: keep `auth.token` populated for device-token auth when
     // no explicit shared token is present.
     const authToken = explicitGatewayToken ?? resolvedDeviceToken;

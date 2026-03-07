@@ -395,10 +395,12 @@ describe("GatewayClient connect auth payload", () => {
     ws.emitOpen();
     emitConnectChallenge(ws);
 
+    // Device token is now always included when available, even when shared token is provided.
+    // This ensures the gateway can verify device identity in addition to main authentication.
     expect(connectFrameFrom(ws)).toMatchObject({
       token: "shared-token",
+      deviceToken: "stored-device-token",
     });
-    expect(connectFrameFrom(ws).deviceToken).toBeUndefined();
     client.stop();
   });
 
