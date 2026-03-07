@@ -146,6 +146,8 @@ function resolveOpenAICodexForwardCompatModel(
       ...template,
       id: trimmedModelId,
       name: trimmedModelId,
+      api: "openai-codex-responses",
+      baseUrl: "https://chatgpt.com/backend-api",
     } as Model<Api>);
   }
 
