@@ -152,5 +152,12 @@ function extractToolText(item: Record<string, unknown>): string | undefined {
   if (typeof item.content === "string") {
     return item.content;
   }
+  // Handle array content: [{ type: "text", text: "output" }]
+  if (Array.isArray(item.content) && item.content.length > 0) {
+    const first = item.content[0] as Record<string, unknown>;
+    if (typeof first.text === "string") {
+      return first.text;
+    }
+  }
   return undefined;
 }
