@@ -139,6 +139,8 @@ const PERMANENT_ANNOUNCE_DELIVERY_ERROR_PATTERNS: readonly RegExp[] = [
   /forbidden: bot was kicked/i,
   /recipient is not a valid/i,
   /outbound not configured for channel/i,
+  // Discord error code 10003 = Unknown Channel (invalid channel ID)
+  /10003/,
 ];
 
 function isTransientAnnounceDeliveryError(error: unknown): boolean {
